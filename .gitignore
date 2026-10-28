@@ -1,0 +1,36 @@
+# Secrets: never commit
+.env
+.env.*
+!.env.example
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml
+
+# Backend
+backend/target/
+
+# Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/coverage/
+frontend/test-results/
+frontend/playwright-report/
+frontend/next-env.d.ts
+frontend/*.tsbuildinfo
+
+# Generated builds and dependencies
+build/
+dist/
+node_modules/
+target/
+
+# Generated builds and dependencies
+build/
+dist/
+node_modules/
+target/

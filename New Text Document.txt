@@ -1,0 +1,3 @@
+One pdf is containing the proper details of web app or web software. 
+Second pdf is containing the tech stacks which will we use. 
+Use your capabilities and efficiencies properly and make a md files which are required properly like for implementation, QA md file etc and then report back to me.
