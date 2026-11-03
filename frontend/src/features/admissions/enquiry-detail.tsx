@@ -49,6 +49,8 @@ function EnquiryView({ enquiry }: { enquiry: Enquiry }) {
   const id = enquiry.id ?? 0;
   const manage = can(P.ADMISSIONS_MANAGE);
   const enrolled = enquiry.studentId != null;
+  // The school confirms the admission (status "approved") before the child can be enrolled (FR 4.6).
+  const approved = enquiry.status?.systemCode === "APPROVED";
   const [value, setValue] = useState(enquiryFrom(enquiry.details));
   const [enrolling, setEnrolling] = useState(false);
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["admissions"] });
@@ -80,11 +82,24 @@ function EnquiryView({ enquiry }: { enquiry: Enquiry }) {
             {enrolled ? (
               <Button render={<Link href={`/app/students/${enquiry.studentId}`} />}>Open student</Button>
             ) : (
-              can(P.ADMISSIONS_ENROL) && <Button onClick={() => setEnrolling(true)}>Enrol</Button>
+              can(P.ADMISSIONS_ENROL) && (
+                <Button
+                  disabled={!approved}
+                  title={approved ? undefined : "Set the status to approved first"}
+                  onClick={() => setEnrolling(true)}
+                >
+                  Enrol
+                </Button>
+              )
             )}
           </>
         }
       />
+      {!enrolled && !approved && can(P.ADMISSIONS_ENROL) && (
+        <p className="-mt-4 text-sm text-muted-foreground">
+          To enrol, first change the status to approved under Follow-up.
+        </p>
+      )}
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="flex flex-col gap-6 lg:col-span-2">
           <Card>
@@ -152,7 +167,7 @@ function StatusCard({ enquiry }: { enquiry: Enquiry }) {
             change.mutate();
           }}
         >
-          <Field id="enq-new-status" label="Status">
+          <Field id="enq-new-status" label="New status">
             <NativeSelect id="enq-new-status" value={statusId} onChange={(e) => setStatusId(Number(e.target.value))}>
               {(statuses.data ?? [])
                 .filter((s) => s.active && s.systemCode !== "ENROLLED")

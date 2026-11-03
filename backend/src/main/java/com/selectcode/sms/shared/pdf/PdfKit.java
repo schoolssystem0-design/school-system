@@ -187,6 +187,32 @@ public final class PdfKit {
 		return ordinals[day];
 	}
 
+	/** e.g. 125000.50 → "Rupees One Lakh Twenty-Five Thousand and Fifty Paisa Only" (South Asian grouping). */
+	public static String amountInWords(java.math.BigDecimal amount) {
+		java.math.BigDecimal a = amount.setScale(2, java.math.RoundingMode.HALF_UP).abs();
+		long rupees = a.longValue();
+		int paisa = a.remainder(java.math.BigDecimal.ONE).movePointRight(2).intValue();
+		String words = rupees == 0 ? "Zero" : groupWords(rupees);
+		return "Rupees " + words + (paisa > 0 ? " and " + numberWords(paisa) + " Paisa" : "") + " Only";
+	}
+
+	private static String groupWords(long n) {
+		StringBuilder sb = new StringBuilder();
+		long[] units = { 10_000_000L, 100_000L, 1_000L };
+		String[] names = { "Crore", "Lakh", "Thousand" };
+		for (int i = 0; i < units.length; i++) {
+			if (n >= units[i]) {
+				long part = n / units[i];
+				sb.append(part >= 100 && i == 0 ? groupWords(part) : numberWords((int) part)).append(' ').append(names[i]).append(' ');
+				n %= units[i];
+			}
+		}
+		if (n > 0) {
+			sb.append(numberWords((int) n));
+		}
+		return sb.toString().trim();
+	}
+
 	static String numberWords(int n) {
 		String[] ones = { "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven",
 				"Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen" };

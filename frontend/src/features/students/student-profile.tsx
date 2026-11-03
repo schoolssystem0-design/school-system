@@ -27,11 +27,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { errorMessage, fileUrl, openBlob } from "@/lib/api/client";
 import { students, type FamilyRow, type Student } from "@/lib/api/people";
-import { formatDate } from "@/lib/format";
+import { fees } from "@/lib/api/fees";
+import { formatDate, formatMoney } from "@/lib/format";
+import { toPaisa } from "@/lib/money";
 import { P } from "@/lib/permissions";
 import { FamilyPicker } from "@/features/families/family-picker";
 import { label, SectionSelect, today, useCan } from "@/features/people/shared";
 import { studentBody, StudentForm, studentFrom } from "./student-form";
+import { LeavePage } from "@/features/attendance/leave-page";
+import { StudentAttendance } from "@/features/attendance/reports-page";
+import { StudentTestMarks } from "@/features/exams/test-marks-page";
+import { StudentFees } from "@/features/fees/student-fees";
 import { Activities, Certificates, Contacts, Documents } from "./student-records";
 
 /** The student's profile (FR 5.1–5.8): details, class history, family, documents, activities and certificates. */
@@ -110,6 +116,9 @@ function Profile({ student }: { student: Student }) {
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="activities">Houses, clubs &amp; achievements</TabsTrigger>
           <TabsTrigger value="certificates">Certificates</TabsTrigger>
+          {can(P.FEES_VIEW) && <TabsTrigger value="fees">Fees</TabsTrigger>}
+          {can(P.ATTENDANCE_VIEW) && <TabsTrigger value="attendance">Attendance &amp; leave</TabsTrigger>}
+          {can(P.EXAMS_VIEW) && <TabsTrigger value="marks">Test marks</TabsTrigger>}
         </TabsList>
         <TabsContent value="details" className="mt-4">
           <Details key={student.version} student={student} />
@@ -127,6 +136,22 @@ function Profile({ student }: { student: Student }) {
         <TabsContent value="activities" className="mt-4">
           <Activities id={id} />
         </TabsContent>
+        {can(P.ATTENDANCE_VIEW) && (
+          <TabsContent value="attendance" className="mt-4 flex flex-col gap-6">
+            <StudentAttendance studentId={id} />
+            <LeavePage personType="STUDENT" personId={id} />
+          </TabsContent>
+        )}
+        {can(P.EXAMS_VIEW) && (
+          <TabsContent value="marks" className="mt-4">
+            <StudentTestMarks studentId={id} />
+          </TabsContent>
+        )}
+        {can(P.FEES_VIEW) && (
+          <TabsContent value="fees" className="mt-4">
+            <StudentFees studentId={id} familyId={student.family?.id ?? undefined} />
+          </TabsContent>
+        )}
         <TabsContent value="certificates" className="mt-4">
           <Certificates student={student} />
         </TabsContent>
@@ -346,6 +371,7 @@ function ActionDialog({ student, action, onClose }: { student: Student; action: 
                   : "The student returns with the same GR number and history."}
             </DialogDescription>
           </DialogHeader>
+          {action === "withdraw" && <OutstandingFees studentId={id} />}
           {needsSection && (
             <Field id="act-section" label="New class and section">
               <SectionSelect id="act-section" required value={sectionId} onChange={setSectionId} />
@@ -379,5 +405,24 @@ function ActionDialog({ student, action, onClose }: { student: Student; action: 
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** Shown when withdrawing (FR 5.6): fees still owed, so they can be collected, carried or written off first. */
+function OutstandingFees({ studentId }: { studentId: number }) {
+  const can = useCan();
+  const ledger = useQuery({
+    queryKey: ["fees", "student-ledger", studentId],
+    queryFn: () => fees.studentLedger(studentId),
+    enabled: can(P.FEES_VIEW),
+  });
+  if (!ledger.data || toPaisa(ledger.data.owed) <= 0n) return null;
+  return (
+    <Alert variant="destructive">
+      <AlertDescription>
+        {formatMoney(ledger.data.owed)} in fees is still owed. Collect it, keep it on the family&apos;s account, or write it off as
+        bad debt from the student&apos;s Fees tab.
+      </AlertDescription>
+    </Alert>
   );
 }

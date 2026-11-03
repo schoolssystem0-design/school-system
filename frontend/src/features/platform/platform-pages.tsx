@@ -20,6 +20,7 @@ import { errorMessage, type Schemas } from "@/lib/api/client";
 import { meQueryKey } from "@/lib/api/auth";
 import { platform } from "@/lib/api/endpoints";
 import { formatDate, formatDateTime } from "@/lib/format";
+import { SchoolsReport } from "@/features/reports/reports-page";
 
 function useOpenSchool() {
   const router = useRouter();
@@ -43,6 +44,12 @@ function StatusBadge({ status }: { status?: string }) {
 }
 
 /** All-schools overview (P-9): every school with its key figures; open any school with full access (P-7). */
+/** The all-schools comparison (P-9); Open drills down into a school with full access. */
+export function PlatformReportsPage() {
+  const open = useOpenSchool();
+  return <SchoolsReport onOpen={(id) => open.mutate(id)} opening={open.isPending} />;
+}
+
 export function PlatformOverview() {
   const overview = useQuery({ queryKey: ["platform", "overview"], queryFn: platform.overview });
   const open = useOpenSchool();

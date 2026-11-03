@@ -119,6 +119,11 @@ Duplicate detection (FR 4.5) uses trigram indexes (`pg_trgm`) on names plus exac
 | `fee_followup` | family_id, remark, next_date, by | Defaulters (FR 10.16) |
 | `voucher_batch` | parameters, file_id, created_by | |
 
+As built (V004): adjustments are `fee_adjustment` + `fee_adjustment_decision` (approval is a separate row); there is no
+`advance_credit` table (credit = the unallocated part of a payment, view `payment_credit`; allocation kinds PAYMENT, CREDIT,
+REVERSAL, RELEASE); bills have no stored status (computed); `fee_run` covers bill and late-fee runs; voucher batches are
+generated on demand; `message_outbox` queues receipt/reminder SMS. See DECISIONS D-31…D-35.
+
 **Balance** = Σ bill_line.net + Σ adjustments − Σ allocations. It is computed from these rows and never stored as an editable
 number. A cached materialised view per student and family is allowed for list performance.
 
@@ -133,6 +138,11 @@ number. A cached materialised view per student and family is allowed for list pe
 | `income_entry`, `expense_entry` | date, category_id, amount, account_id, vendor_id, reference, attachment_file_id, approval_status | Create journal entries |
 | `vendor` | name, phone, address | Vendor balance from journal lines (FR 11.7) |
 | `day_close` | account_id, date, opening, in, out, closing, counted_amount, signed_by | FR 11.9 |
+
+As built (V005): income, expense, transfer, supplier bill and supplier payment are one insert-only table `money_entry`
+(kind, Idempotency-Key, reversal link) with approval in `money_entry_decision`; vendor balances are computed from approved
+supplier entries; bank reconciliation marks are rows in `bank_clearance` (journal lines stay unchanged); payroll uses
+`salary_sheet` + `salary_sheet_line` with a database trigger that locks lines once the sheet leaves DRAFT. See D-36…D-40.
 
 ## 9. Attendance (FR 13)
 
@@ -150,14 +160,22 @@ number. A cached materialised view per student and family is allowed for list pe
 
 | Entity | Key fields | Notes |
 |---|---|---|
-| `exam` | academic_year_id, name, start_date, comments, counts_in_cumulative, weight, visible, status `DRAFT/REVIEWED/PUBLISHED` (per class) | |
-| `exam_class` | exam_id, class_id, status, published_at, published_by | Publish per class |
-| `exam_subject` | exam_class_id, subject_id, max_marks, passing_marks | Copied from `class_subject`, editable |
-| `datesheet_entry` | exam_class_id, subject_id, date, start, end, syllabus | |
-| `mark` | exam_subject_id, student_id, obtained NUMERIC(6,2) null, flag `ABSENT/EXEMPT` null, entered_by, entered_at, `CHECK obtained <= max` | Null + no flag = missing |
-| `grade_scale`, `grade_band` | scale name, min_pct, max_pct, grade, remark | Separate scale for grade-only classes |
-| `result_remark` | exam_class_id, student_id, subject_id nullable, text, approved_by | |
-| `result_snapshot` | exam_class_id, student_id, totals, pct, grade, position, json | Frozen at publish; corrections create a new version (FR 14.11) |
+| `exam` | academic_year_id, name, start_date, end_date, comments, counts_in_cumulative, weight NUMERIC(5,2), visible, version | Name unique per year (case-insensitive) |
+| `exam_class` | exam_id, class_id, grade_scale_id, status `DRAFT/REVIEWED/PUBLISHED`, reviewed_by/at, published_by/at, published_version, unlocked_by/at, unlock_reason | Workflow per class (D-49) |
+| `exam_subject` | exam_class_id, subject_id, max_marks, passing_marks, display_order, paper_date, start_time, end_time, syllabus | A paper; copied from `class_subject`, editable while draft; also the datesheet |
+| `mark` | exam_subject_id, student_id, obtained NUMERIC(6,2), grade, flag `ABSENT/EXEMPT`, entered_by, entered_at | Exactly one of obtained / grade / flag; no row = missing (D-47) |
+| `mark_change` | exam_subject_id, student_id, old_value, new_value, reason, changed_by, changed_at | Insert-only log of changes after first publishing (FR 14.11) |
+| `grade_scale`, `grade_band` | scale: name, kind `MARKS/GRADES`, is_default; band: grade, min_percent (inclusive), remark, passing, display_order | One default scale per kind per school, seeded on school creation (D-14) |
+| `result_remark` | exam_class_id, student_id, teacher_remark, principal_remark, updated_by | One row per student per exam class |
+| `result_snapshot` | exam_class_id, student_id, version, section_id, total_obtained, total_max, percent, grade, position, passed, data JSONB, published_by/at | Insert-only; frozen at publish; a correction adds a new version (D-49) |
+
+Simple test marks (D-51), the tables in use on screen:
+
+| Entity | Key fields | Notes |
+|---|---|---|
+| `class_test` | academic_year_id, section_id, subject_id, name, test_date, max_marks | Unique per section, subject, day and name; can be deleted only with no marks |
+| `test_mark` | class_test_id, student_id, obtained, absent, entered_by/at | No row = not entered |
+| `test_mark_change` | class_test_id, student_id, old_value, new_value, reason, changed_by/at | Insert-only log of changes to saved marks |
 
 ## 11. Office, communication, website (FR 3, 8.6, 16)
 
@@ -165,10 +183,11 @@ number. A cached materialised view per student and family is allowed for list pe
 |---|---|
 | `task`, `task_share` | description, deadline, priority NORMAL/URGENT, status, completed_at |
 | `complaint`, `complaint_remark` | parent/family, subject, status OPEN/CLOSED, assigned_to, opened_at |
-| `circular` | title, body, date, audience, published |
+| `circular` | title, body, circular_date, created_by | For staff; families are told through Messages (D-56) |
 | `school_event` | title, date_from, date_to, type EVENT/HOLIDAY/EXAM, show_on_website |
 | `visitor_entry` | date, name, purpose, time_in | Count only on dashboard (visitor mgmt out of scope) |
-| `message_template` | code, body with placeholders (English) |
+| `message_template` | code, body with placeholders (English) | Only customised wording is stored |
+| `user_favourite` | user_id, href, label, display_order | Quick bar per user (FR 3.12) |
 | `message_outbox` | channel SMS/WHATSAPP/PUSH, recipient, body, status, attempts, provider_ref, related entity |
 | `web_page`, `web_post`, `web_gallery`, `web_photo`, `web_download`, `web_setting` | status DRAFT/PUBLISHED/REMOVED, publish_at, owner_user_id, last_edited_by |
 | `web_form_submission` | type ADMISSION/JOB/FEEDBACK, payload jsonb, file_id, read_at, linked_enquiry_id |
@@ -177,9 +196,9 @@ number. A cached materialised view per student and family is allowed for list pe
 ## 12. Integrity rules checklist
 - Every tenant table has `school_id NOT NULL`, an RLS policy, and `school_id` in its unique and foreign keys. A test (`TenantIsolationIT.everyTenantTableHasRowLevelSecurity`) verifies this from the catalogue.
 - Exactly one CURRENT academic year per school.
-- No hard deletes on: students, staff, families, bills, payments, journal, marks, attendance, audit.
+- No hard deletes on: students, staff, families, bills, payments, journal, attendance, audit, result snapshots. A mark can be cleared (back to missing) only while its class has never been published; after that marks are corrected, never removed, and each change is logged.
 - `journal_line` sums per entry: Σdebit = Σcredit (deferred constraint trigger).
-- `mark.obtained` must be between 0 and `exam_subject.max_marks` (enforced in service and DB).
+- `mark.obtained` must be between 0 and `exam_subject.max_marks` (0 and 2 decimals in the DB; the maximum in the service, which also refuses lowering a maximum below marks already entered).
 - A student has at most one open `enrolment` per academic year at any date (exclusion constraint on a daterange).
 - A receipt number is unique per school and academic year, with no gaps.
 - Attendance cannot be marked on OFF days or holidays unless the user overrides with a reason.

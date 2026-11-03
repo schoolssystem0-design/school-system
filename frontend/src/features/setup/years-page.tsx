@@ -12,10 +12,20 @@ import { PageHeader } from "@/components/app/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { errorMessage } from "@/lib/api/client";
 import { school, type DayType, type WorkingWeek, type Year } from "@/lib/api/endpoints";
+import { rollover } from "@/lib/api/people";
 import { formatDate } from "@/lib/format";
 import { can, P } from "@/lib/permissions";
 import { useMe } from "@/features/shell/app-shell";

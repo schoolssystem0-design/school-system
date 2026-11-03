@@ -44,6 +44,15 @@ public class ApiClient {
 		return send(withJson(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(url), json), true);
 	}
 
+	/** POST with an Idempotency-Key header (payments, bill runs, reminders). */
+	public ResultActions postWithKey(String url, String json, String idempotencyKey) throws Exception {
+		var builder = withJson(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(url), json);
+		if (idempotencyKey != null) {
+			builder.header("Idempotency-Key", idempotencyKey);
+		}
+		return send(builder, true);
+	}
+
 	public ResultActions post(String url) throws Exception {
 		return post(url, null);
 	}

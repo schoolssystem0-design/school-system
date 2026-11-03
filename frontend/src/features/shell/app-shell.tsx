@@ -3,19 +3,48 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
+  AlarmClock,
+  ArrowLeftRight,
+  Banknote,
+  BarChart3,
+  Cake,
   BookOpen,
+  CalendarCheck,
+  ClipboardCheck,
+  ClipboardPen,
+  CalendarClock,
   CalendarDays,
+  ClipboardList,
+  Contact,
+  DoorOpen,
+  FileBarChart,
+  Megaphone,
+  MessageSquare,
+  MessageSquareWarning,
+  GraduationCap,
+  HandCoins,
+  Home,
+  Landmark,
+  LineChart,
   KeyRound,
   LayoutDashboard,
   Loader2,
   LogIn,
   LogOut,
+  PenLine,
+  Percent,
+  PieChart,
+  Plane,
+  Receipt,
+  ScrollText,
   School,
   Settings2,
   ShieldCheck,
   SlidersHorizontal,
+  UserCheck,
   UserCog,
   Users,
+  Wallet,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -34,6 +63,67 @@ type NavItem = { href: string; label: string; icon: typeof LayoutDashboard; perm
 
 const NAV: { title?: string; items: NavItem[] }[] = [
   { items: [{ href: "/app", label: "Dashboard", icon: LayoutDashboard }] },
+  {
+    title: "People",
+    items: [
+      { href: "/app/admissions", label: "Admissions", icon: ClipboardList, permission: P.ADMISSIONS_VIEW },
+      { href: "/app/students", label: "Students", icon: GraduationCap, permission: P.STUDENTS_VIEW },
+      { href: "/app/families", label: "Families", icon: Home, permission: P.FAMILIES_VIEW },
+      { href: "/app/staff", label: "Staff", icon: Contact, permission: P.STAFF_VIEW },
+      { href: "/app/teaching", label: "Teaching & timetable", icon: CalendarClock, permission: P.ACADEMICS_VIEW },
+    ],
+  },
+  {
+    title: "Attendance",
+    items: [
+      { href: "/app/attendance", label: "Take attendance", icon: ClipboardCheck, permission: P.ATTENDANCE_VIEW },
+      { href: "/app/attendance/leave", label: "Leave", icon: Plane, permission: P.ATTENDANCE_LEAVE_MANAGE },
+      { href: "/app/attendance/staff", label: "Staff attendance", icon: UserCheck, permission: P.ATTENDANCE_STAFF_MARK },
+      { href: "/app/attendance/reports", label: "Attendance reports", icon: PieChart, permission: P.ATTENDANCE_VIEW },
+    ],
+  },
+  {
+    title: "Office",
+    items: [
+      { href: "/app/office/tasks", label: "Tasks", icon: ClipboardPen, permission: P.OFFICE_TASKS },
+      { href: "/app/office/complaints", label: "Parent complaints", icon: MessageSquareWarning, permission: P.OFFICE_COMPLAINTS_VIEW },
+      { href: "/app/office/circulars", label: "Circulars", icon: Megaphone, permission: P.OFFICE_CIRCULARS_VIEW },
+      { href: "/app/office/calendar", label: "Calendar", icon: CalendarDays, permission: P.OFFICE_EVENTS_VIEW },
+      { href: "/app/office/visitors", label: "Visitors", icon: DoorOpen, permission: P.OFFICE_VISITORS_VIEW },
+      { href: "/app/office/birthdays", label: "Birthdays", icon: Cake, permission: P.STUDENTS_PRIVATE_VIEW },
+      { href: "/app/messages", label: "Messages", icon: MessageSquare, permission: P.MESSAGES_VIEW },
+    ],
+  },
+  {
+    title: "Marks",
+    items: [{ href: "/app/marks", label: "Test marks", icon: PenLine, permission: P.EXAMS_VIEW }],
+  },
+  {
+    title: "Fees",
+    items: [
+      { href: "/app/fees/collect", label: "Collect fees", icon: Banknote, permission: P.FEES_PAYMENT_ADD },
+      { href: "/app/fees/bills", label: "Bills & vouchers", icon: Receipt, permission: P.FEES_VIEW },
+      { href: "/app/fees/payments", label: "Payments & corrections", icon: ScrollText, permission: P.FEES_VIEW },
+      { href: "/app/fees/discounts", label: "Discounts", icon: Percent, permission: P.FEES_VIEW },
+      { href: "/app/fees/defaulters", label: "Fee status & defaulters", icon: AlarmClock, permission: P.FEES_VIEW },
+      { href: "/app/fees/reports", label: "Fee reports", icon: BarChart3, permission: P.FEES_REPORTS_VIEW },
+      { href: "/app/fees/setup", label: "Fee set-up", icon: Wallet, permission: P.FEES_VIEW },
+    ],
+  },
+  {
+    title: "Accounts & payroll",
+    items: [
+      { href: "/app/accounts/entries", label: "Income & expenses", icon: ArrowLeftRight, permission: P.ACCOUNTS_VIEW },
+      { href: "/app/accounts/day", label: "Day book & close", icon: CalendarCheck, permission: P.ACCOUNTS_VIEW },
+      { href: "/app/accounts", label: "Cash & bank", icon: Landmark, permission: P.ACCOUNTS_VIEW },
+      { href: "/app/accounts/reports", label: "Financial reports", icon: LineChart, permission: P.ACCOUNTS_REPORTS_VIEW },
+      { href: "/app/payroll", label: "Payroll", icon: HandCoins, permission: P.PAYROLL_VIEW },
+    ],
+  },
+  {
+    title: "Reports",
+    items: [{ href: "/app/reports", label: "Reports", icon: FileBarChart, permission: P.REPORTS_VIEW }],
+  },
   {
     title: "School setup",
     items: [
@@ -55,6 +145,21 @@ const NAV: { title?: string; items: NavItem[] }[] = [
   },
   { items: [{ href: "/app/account", label: "My account", icon: KeyRound }] },
 ];
+
+const ALL_HREFS = NAV.flatMap((g) => g.items.map((i) => i.href));
+
+const matches = (href: string, pathname: string) => pathname === href || pathname.startsWith(`${href}/`);
+
+/** The menu item for the page: the longest link that matches (so /app/accounts is not lit on /app/accounts/day). */
+function isActive(href: string, pathname: string) {
+  if (!matches(href, pathname)) return false;
+  return !ALL_HREFS.some((other) => other.length > href.length && matches(other, pathname));
+}
+
+/** Menu pages this user may open, for the dashboard quick bar. */
+export function navItems(permissions: readonly string[]) {
+  return NAV.flatMap((group) => group.items).filter((item) => !item.permission || can(permissions, item.permission));
+}
 
 export function useMe() {
   return useQuery({ queryKey: meQueryKey, queryFn: fetchMe });
@@ -119,7 +224,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
 function Sidebar({ me, pathname }: { me: Me; pathname: string }) {
   return (
-    <aside className="hidden w-64 shrink-0 border-r bg-sidebar p-4 md:block">
+    <aside className="hidden w-64 shrink-0 border-r bg-sidebar p-4 md:block print:hidden">
       <div className="mb-6 flex items-center gap-2 font-semibold">
         <School className="size-5 shrink-0" aria-hidden />
         <span className="truncate">{me.school?.name}</span>
@@ -137,7 +242,7 @@ function Sidebar({ me, pathname }: { me: Me; pathname: string }) {
               )}
               <ul className="flex flex-col gap-0.5">
                 {items.map(({ href, label, icon: Icon }) => {
-                  const active = href === "/app" ? pathname === "/app" : pathname.startsWith(href);
+                  const active = isActive(href, pathname);
                   return (
                     <li key={href}>
                       <Link
@@ -196,7 +301,7 @@ function Header({ me }: { me: Me }) {
   });
 
   return (
-    <header className="flex min-h-14 flex-wrap items-center justify-between gap-3 border-b px-6 py-2">
+    <header className="flex min-h-14 flex-wrap items-center justify-between gap-3 border-b px-6 py-2 print:hidden">
       <div className="flex items-center gap-4">
         <span className="text-sm text-muted-foreground md:hidden">{me.school?.name}</span>
         <YearSwitcher />

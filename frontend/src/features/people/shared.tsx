@@ -118,7 +118,7 @@ export function UploadButton({
   onUploaded,
   disabled,
 }: {
-  purpose: "PHOTO" | "STUDENT_DOCUMENT" | "STAFF_DOCUMENT";
+  purpose: "PHOTO" | "STUDENT_DOCUMENT" | "STAFF_DOCUMENT" | "ACCOUNT_DOCUMENT";
   accept: string;
   label: string;
   onUploaded: (fileId: number, fileName: string) => void;

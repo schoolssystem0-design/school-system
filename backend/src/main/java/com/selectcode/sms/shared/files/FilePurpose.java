@@ -20,7 +20,9 @@ public enum FilePurpose {
 	STUDENT_DOCUMENT(FileKind.DOCUMENT, Set.of(Permissions.STUDENTS_MANAGE, Permissions.ADMISSIONS_ENROL),
 			Set.of(Permissions.STUDENTS_PRIVATE_VIEW)),
 	/** Degree copies, CNIC copy… (FR 6.1). */
-	STAFF_DOCUMENT(FileKind.DOCUMENT, Set.of(Permissions.STAFF_MANAGE), Set.of(Permissions.STAFF_MANAGE));
+	STAFF_DOCUMENT(FileKind.DOCUMENT, Set.of(Permissions.STAFF_MANAGE), Set.of(Permissions.STAFF_MANAGE)),
+	/** Bills and receipts attached to income and expense entries (FR 11.5). */
+	ACCOUNT_DOCUMENT(FileKind.DOCUMENT, Set.of(Permissions.ACCOUNTS_ENTRY_ADD), Set.of(Permissions.ACCOUNTS_VIEW));
 
 	public enum FileKind {
 

@@ -8,6 +8,8 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: false,
+  // One shared API and dev outbox (step-up codes): run files one after another.
+  workers: 1,
   retries: 0,
   reporter: "list",
   use: {

@@ -13,6 +13,7 @@ import com.selectcode.sms.shared.web.RateLimiter;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -43,12 +44,14 @@ public class SignInService {
 
 	private final Clock clock;
 
+	private final int signInLimit;
+
 	/** Compared against when the user does not exist, so response time doesn't reveal valid usernames. */
 	private final String dummyHash;
 
 	SignInService(SchoolLookup schools, AppUserRepository users, LoginEventRepository loginEvents,
 			PasswordEncoder passwordEncoder, PlatformTransactionManager transactionManager, RateLimiter rateLimiter,
-			Clock clock) {
+			Clock clock, @Value("${app.security.signin-limit-per-network:30}") int signInLimit) {
 		this.schools = schools;
 		this.users = users;
 		this.loginEvents = loginEvents;
@@ -56,6 +59,7 @@ public class SignInService {
 		this.transaction = new TransactionTemplate(transactionManager);
 		this.rateLimiter = rateLimiter;
 		this.clock = clock;
+		this.signInLimit = signInLimit;
 		this.dummyHash = passwordEncoder.encode("not-a-real-password");
 	}
 
@@ -64,7 +68,7 @@ public class SignInService {
 	 * @throws ApiException {@code INVALID_CREDENTIALS} (401), {@code ACCOUNT_LOCKED} or {@code SCHOOL_SUSPENDED} (423)
 	 */
 	public SchoolUserPrincipal signIn(SignInAttempt attempt) {
-		rateLimiter.check("signin:" + attempt.ip(), 30, Duration.ofMinutes(5));
+		rateLimiter.check("signin:" + attempt.ip(), signInLimit, Duration.ofMinutes(5));
 		SchoolRef school = schools.findByCode(attempt.schoolCode()).orElse(null);
 		if (school == null) {
 			passwordEncoder.matches(attempt.password(), dummyHash);
@@ -108,11 +112,11 @@ public class SignInService {
 			return user.getStatus() == AppUser.Status.INACTIVE ? new Outcome.Invalid() : new Outcome.Locked();
 		}
 		if (!passwordEncoder.matches(attempt.password(), user.getPasswordHash())) {
-			user.recordFailedSignIn(now);
+			users.recordFailedSignIn(user.getId(), AppUser.MAX_FAILED_ATTEMPTS, now.plus(AppUser.LOCK_DURATION));
 			record(user.getId(), attempt, LoginEvent.Result.INVALID, now, false);
 			return new Outcome.Invalid();
 		}
-		user.recordSuccessfulSignIn(now);
+		users.recordSuccessfulSignIn(user.getId(), now);
 		record(user.getId(), attempt, LoginEvent.Result.SUCCESS, now, isNewLocation(user.getId(), attempt.ip()));
 		return new Outcome.Success(new SchoolUserPrincipal(user.getId(), school.id(), school.code(), school.name(),
 				user.getUsername(), user.getDisplayName()));

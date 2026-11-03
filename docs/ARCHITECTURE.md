@@ -128,7 +128,7 @@ This was chosen over one database or schema per school because it is cheapest on
 5. **Files:** R2 object keys are prefixed `schools/{schoolId}/...`. Presigned URLs are issued only after a tenant + permission check.
 6. **Tests:** an automated cross-tenant suite (QA-TEN) runs every endpoint as School A against School B's IDs.
 
-**Platform level (no tenant):** tables `school`, `school_domain`, `platform_user`, `platform_audit_log`, plus Spring Batch metadata.
+**Platform level (no tenant):** tables `school`, `school_domain`, `platform_user`, `platform_audit_log`, (no batch-framework tables: bill runs keep their own `fee_run` record, DECISIONS D-31).
 Background jobs run **per school**: the scheduler iterates active schools and sets the tenant context for each run.
 
 **Users:**
@@ -220,7 +220,7 @@ sender ID: all tenant-scoped. Seeds (default roles, statuses, grade scale) are c
 - Large batches (for example 800 vouchers) run as async jobs. The PDF is stored in R2 and the user gets a download link.
 
 ### 4.10 Batch and scheduling (FR 10.5, 10.11, 10.12, payroll)
-- Spring Batch jobs: monthly bill generation, late-fee application, absent-fine application, salary sheet, nightly
+- Background runs (chunked, restartable, idempotent; DECISIONS D-31): monthly bill generation, late-fee application, absent-fine application, salary sheet, nightly
   DB dump to R2. Jobs are restartable and idempotent: a unique key on `(student, fee_head, period)` prevents double billing.
 - `job_run` records show the operator, parameters, counts and errors in the UI.
 

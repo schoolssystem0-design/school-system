@@ -30,6 +30,8 @@ public abstract class IntegrationTest {
 		registry.add("app.db.app-user", () -> TestDatabase.APP_USER);
 		registry.add("app.db.app-password", () -> TestDatabase.APP_PASSWORD);
 		registry.add("app.security.cookie-secure", () -> "false");
+		// Tests send queued messages explicitly (MessageOutbox.dispatchDue) so results are deterministic.
+		registry.add("app.outbox.auto-dispatch", () -> "false");
 	}
 
 	/** All requests in tests come from 127.0.0.1; don't let one test's sign-ins throttle the next. */

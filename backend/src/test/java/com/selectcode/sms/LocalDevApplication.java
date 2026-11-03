@@ -36,6 +36,8 @@ public class LocalDevApplication {
 		System.setProperty("spring.flyway.password", "postgres");
 		System.setProperty("app.db.app-user", TestDatabase.APP_USER);
 		System.setProperty("app.db.app-password", TestDatabase.APP_PASSWORD);
+		// One browser test run signs in more often than the real limit (30 in 5 minutes). This class never runs in production.
+		System.setProperty("app.security.signin-limit-per-network", "300");
 
 		ConfigurableApplicationContext context = SpringApplication.from(SmsApplication::main)
 			.withAdditionalProfiles("local")

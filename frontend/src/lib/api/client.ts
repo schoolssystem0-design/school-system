@@ -73,11 +73,17 @@ type RequestOptions = {
   body?: unknown;
   /** multipart upload (FormData); sent without a JSON content type */
   form?: FormData;
+  /** extra headers, e.g. Idempotency-Key on money-creating calls */
+  headers?: Record<string, string>;
 };
 
-async function send(path: string, { method = "GET", body, form }: RequestOptions, accept: string): Promise<Response> {
+async function send(
+  path: string,
+  { method = "GET", body, form, headers: extra }: RequestOptions,
+  accept: string,
+): Promise<Response> {
   const attempt = async (token: string | null) => {
-    const headers: Record<string, string> = { Accept: accept };
+    const headers: Record<string, string> = { Accept: accept, ...extra };
     if (body !== undefined) headers["Content-Type"] = "application/json";
     if (token) headers["X-XSRF-TOKEN"] = token;
     if (academicYearId != null) headers["X-Academic-Year"] = String(academicYearId);
@@ -112,10 +118,10 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
   return (await response.json()) as T;
 }
 
-/** Calls an endpoint that returns a file (PDF certificates, forms, ID cards). */
-export async function apiBlob(path: string, options: RequestOptions = {}): Promise<Blob> {
+/** Calls an endpoint that returns a file (PDF certificates, forms, ID cards; a PNG datesheet). */
+export async function apiBlob(path: string, options: RequestOptions = {}, type = "application/pdf"): Promise<Blob> {
   // Errors still come back as problem+json, so they must stay acceptable.
-  const response = await send(path, options, "application/pdf, application/problem+json, application/json");
+  const response = await send(path, options, `${type}, application/problem+json, application/json`);
   return response.blob();
 }
 

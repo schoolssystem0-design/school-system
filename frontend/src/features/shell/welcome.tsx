@@ -4,13 +4,14 @@ import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, Circle } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/app/page-header";
+import { DashboardPanels } from "@/features/dashboard/dashboard-page";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { academics, school } from "@/lib/api/endpoints";
 import { can, P } from "@/lib/permissions";
 import { useMe } from "./app-shell";
 import { useYear } from "./year-context";
 
-/** Dashboard placeholder (full dashboard: Phase 7) with the first-run setup checklist (FR 17 A). */
+/** The dashboard: the first-run setup checklist (FR 17 A) until set-up is done, then the panels (FR 3). */
 export function Welcome() {
   const me = useMe();
   const { current } = useYear();
@@ -71,7 +72,7 @@ export function Welcome() {
         title={`Welcome, ${me.data.displayName}`}
         description={`${me.data.school?.name}${current ? ` · Academic year ${current.name}` : ""}`}
       />
-      {steps.length > 0 && (
+      {steps.some((s) => !s.done && s.href !== "/app/users") && (
         <Card className="max-w-2xl">
           <CardHeader>
             <CardTitle>Set up your school</CardTitle>
@@ -95,9 +96,7 @@ export function Welcome() {
           </CardContent>
         </Card>
       )}
-      <p className="text-sm text-muted-foreground">
-        Admissions, students, fees, attendance and exams are added in the next phases.
-      </p>
+      <DashboardPanels />
     </div>
   );
 }

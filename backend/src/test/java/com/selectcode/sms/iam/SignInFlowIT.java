@@ -110,6 +110,31 @@ class SignInFlowIT extends IntegrationTest {
 	}
 
 	@Test
+	void sameUserCanSignInFromSeveralDevicesAtOnce() throws Exception {
+		// QA-SEC-021: sign-in bookkeeping must not race on the user's optimistic-lock version.
+		Long versionBefore = TestDatabase.superuser()
+			.queryForObject("select version from app_user where school_id = ? and username = 'admin'", Long.class,
+					schoolA.id());
+		var pool = java.util.concurrent.Executors.newFixedThreadPool(6);
+		try {
+			var calls = new java.util.ArrayList<java.util.concurrent.Future<Integer>>();
+			for (int i = 0; i < 6; i++) {
+				calls.add(pool.submit(() -> login(schoolA.code(), "admin", "password-a").andReturn().getResponse().getStatus()));
+			}
+			for (var call : calls) {
+				assertThat(call.get()).isEqualTo(200);
+			}
+		}
+		finally {
+			pool.shutdown();
+		}
+		Long versionAfter = TestDatabase.superuser()
+			.queryForObject("select version from app_user where school_id = ? and username = 'admin'", Long.class,
+					schoolA.id());
+		assertThat(versionAfter).as("signing in does not count as editing the user").isEqualTo(versionBefore);
+	}
+
+	@Test
 	void unknownSchoolLooksLikeBadCredentials() throws Exception {
 		login("NOPE-SCHOOL", "admin", "password-a").andExpect(status().isUnauthorized())
 			.andExpect(jsonPath("$.code").value("INVALID_CREDENTIALS"));

@@ -113,23 +113,6 @@ public class AppUser extends TenantScopedEntity {
 		return lockedUntil != null && lockedUntil.isAfter(now);
 	}
 
-	public void recordSuccessfulSignIn(Instant now) {
-		failedAttempts = 0;
-		lockedUntil = null;
-		lastLoginAt = now;
-		updatedAt = now;
-	}
-
-	/** Counts a wrong password; locks the account for {@link #LOCK_DURATION} after {@link #MAX_FAILED_ATTEMPTS}. */
-	public void recordFailedSignIn(Instant now) {
-		failedAttempts++;
-		if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
-			lockedUntil = now.plus(LOCK_DURATION);
-			failedAttempts = 0;
-		}
-		updatedAt = now;
-	}
-
 	public void unlock(Instant now) {
 		lockedUntil = null;
 		failedAttempts = 0;

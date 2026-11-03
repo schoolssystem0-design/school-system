@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Building2, LayoutGrid, Loader2, LogOut, ScrollText, ShieldCheck } from "lucide-react";
+import { Building2, FileBarChart, LayoutGrid, Loader2, LogOut, ScrollText, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -14,6 +14,7 @@ import { platform } from "@/lib/api/endpoints";
 const NAV = [
   { href: "/platform", label: "All schools", icon: LayoutGrid },
   { href: "/platform/schools/new", label: "Add school", icon: Building2 },
+  { href: "/platform/reports", label: "Reports", icon: FileBarChart },
   { href: "/platform/audit", label: "Platform audit", icon: ScrollText },
 ];
 
@@ -62,7 +63,7 @@ export function PlatformShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="flex h-14 items-center justify-between gap-4 bg-indigo-800 px-6 text-white">
+      <header className="flex h-14 items-center justify-between gap-4 bg-indigo-800 px-6 text-white print:hidden">
         <span className="flex items-center gap-2 font-semibold">
           <ShieldCheck className="size-5" aria-hidden /> Platform console
         </span>

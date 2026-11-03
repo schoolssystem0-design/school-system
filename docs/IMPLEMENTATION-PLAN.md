@@ -130,12 +130,25 @@ FR 4.1–4.12, 5.1–5.11, 6.1–6.7, 7.1–7.4, 8.1–8.6
 Exit criteria: suites `QA-ADM-*`, `QA-STU-*`, `QA-FAM-*`, `QA-STF-*` pass. Enrolling an approved enquiry creates the student,
 enrolment and family link in one transaction.
 
+### Phase 2 status (2026-10-28)
+| Area | Status |
+|---|---|
+| Admissions: enquiries (ENQ- numbers), coloured custom statuses, remarks timeline, admission test, duplicate warnings (name/DOB/phone/CNIC, fuzzy), approval before enrolment, enrol in one transaction (student + enrolment + family + status), terms/syllabus, printable admission form PDF | ✅ Done |
+| Students: list with search/filters, class strength, admission/leaving register, admit (GR suggestion), profile tabs (details, class history, family & contacts, documents, houses/clubs/achievements, certificates), move section with effective date, withdraw/re-admit, promotion wizard, bulk field update, ID cards, bio-data, six certificate types with per-school serial numbers, private-field masking | ✅ Done |
+| Families: family record shared by siblings, extra contacts with collection/message flags, change-family with confirmation, bulk update, data-issue report | ✅ Done |
+| Staff: teachers and other staff (EMP- numbers), documents, sign-in creation (verification code), salary history (append-only, verification code), leaving (sign-in closed, classes ended) / rejoin, experience certificate | ✅ Done |
+| Teaching: class and subject teachers with effective dates, hand-over, section timetable with double-booking check, teacher's timetable | ✅ Done |
+| Year rollover: copy working week, subjects and teachers from an earlier year (earlier year untouched) | ✅ Done |
+| Fixes found in Phase 2: unique API schema names (guarded by a test); concurrent sign-ins of one user no longer conflict (QA-SEC-021); clear message when sign-in is rate limited | ✅ Done |
+| Tests: 93 backend (18 unit/architecture + 75 integration on PostgreSQL), 18 frontend unit, 11 browser end-to-end | ✅ Passing |
+| Not yet: withdrawal balance and fee/attendance/result tabs arrive with Phases 3, 5 and 6 (FR 5.6 balance, QA-STU-005) | ℹ️ |
+
 ## Phase 3: Fees
 FR 4.10, 10.1–10.18 (10.19 deferred)
 
 - Fee heads, class-wise structure per year (missing-amount flags), student overrides.
 - Discounts (amount/percent) with an approval workflow above a threshold, sibling discount rules, "should have a discount but doesn't" report.
-- Bill generation (single/family/class/multi-class/selected, exclusions) as an idempotent Spring Batch job.
+- Bill generation (single/family/class/multi-class/selected, exclusions) as an idempotent, chunked, restartable run (D-31).
   Admission charges are proposed automatically at enrolment.
 - Vouchers: settings-driven layout, arrears show/hide, late-fee note, bank details, batch PDF.
 - Payments: student or family, partial, multiple bills, oldest-first allocation with manual override, methods,
@@ -148,6 +161,20 @@ FR 4.10, 10.1–10.18 (10.19 deferred)
 
 Exit criteria: all `QA-FEE-*` cases pass, including concurrency, idempotency and rollback tests. Reconciliation test:
 Σ payments = Σ allocations + Σ advance credit = Σ fee-income journal lines for any date range.
+
+### Phase 3 status (2026-10-28)
+| Area | Status |
+|---|---|
+| Set-up: fee heads (any frequency, maximum, refundable, switch off), class amounts per year with missing-amount flags, student's own amounts, sibling rules | ✅ Done |
+| Discounts: amount or percentage per head or all heads, dates, approval above the school's limit, end; sibling discount automatic; "missing sibling discount" report | ✅ Done |
+| Bill runs: whole school / classes / section / student, exclusions, monthly / yearly / one-time / term heads, Idempotency-Key replay, never the same head and period twice (database rule), chunked and restartable, missing-amount report, advance credit applied automatically; admission charges proposed on the student's Fees tab | ✅ Done |
+| Vouchers: three copies per page (bank, school, parent), arrears shown or hidden per setting, late-fee note, bank details and note settings, batch PDF per run or section | ✅ Done |
+| Payments: family or one child, partial, several bills, oldest-first or chosen lines, cash/bank/cheque/online, account, advance credit, gapless receipt number per year, receipt PDF (A4/A5) and SMS through a retrying outbox, one transaction with allocations, journal and audit | ✅ Done |
+| Corrections: correction / waiver / bad debt with reason and approval; a reduced paid charge becomes advance credit; payment reversal with reason and verification code; money tables insert-only for the app | ✅ Done |
+| Late fee run (once per bill, class exclusions); ledgers (student, family); fee status; defaulters with SMS reminders, final reminder letter and follow-ups; reports by head, money received, family month-wise receivables, advances, bad debts; message log | ✅ Done |
+| Journal: every payment, credit use and reversal posts a balanced entry (database refuses unbalanced ones) to cash/bank, fee income and fees received in advance | ✅ Done |
+| Tests: 111 backend (18 unit/architecture + 93 integration incl. 18 fee cases: idempotency, two cashiers, atomic failure, 40-step random reconciliation), 23 frontend unit, 14 browser end-to-end | ✅ Passing |
+| Not in this phase: absent fine (FR 10.12, needs attendance, moved to Phase 5); online payment (FR 10.19, deferred) | ℹ️ |
 
 ## Phase 4: School accounts and payroll
 FR 11.1–11.13, 6.8, 13.12, 12 (salary rules)
@@ -162,6 +189,19 @@ FR 11.1–11.13, 6.8, 13.12, 12 (salary rules)
 
 Exit criteria: `QA-ACC-*`, `QA-PAY-*` pass. The trial balance always nets to zero.
 
+### Phase 4 status (2026-10-31)
+| Area | Status |
+|---|---|
+| Cash and bank accounts with opening balances, close (only at zero); income and expense categories (each with its own ledger account); suppliers with what is owed | ✅ Done |
+| Entries: income, expense, transfer, supplier bill, supplier payment; attachment; Idempotency-Key; expenses and supplier payments above the limit wait for approval; reject; reversal with reason (both kept); insert-only | ✅ Done |
+| Books: account ledger (each entry / per day / per month), daily cash summary by source (fee receipts appear once, from the journal), day close with counted amount (difference needs a note; closed days lock the account, fee payments included), bank reconciliation | ✅ Done |
+| Reports: income and expense per month, by category, daily collection, trial balance, balance sheet; financial activity history | ✅ Done |
+| Payroll: sheet per month from the salary record in effect on the 1st, deductions by the salary rules (absent, half day, late days as absences, leave beyond the paid allowance), lectures, allowance, tax and other deductions; approve (accrual journal) → pay (Idempotency-Key, payment journal) → locked; reversal; salary slips | ✅ Done |
+| Every change in accounts and payroll asks for a verification code; reads and writes need the "all classes" data scope | ✅ Done |
+| Fee journal posting moved to the shared journal writer (balance and day-close checks for every module) | ✅ Done |
+| Tests: 122 backend (18 unit/architecture + 104 integration incl. 7 accounts and 4 payroll cases), 23 frontend unit, 16 browser end-to-end | ✅ Passing |
+| Waiting for Phase 5: staff attendance fills the salary sheet automatically (until then the days are entered on the draft sheet; D-36) | ℹ️ |
+
 ## Phase 5: Attendance
 FR 13.1–13.12
 
@@ -173,6 +213,17 @@ FR 13.1–13.12
 - Optional SMS to parents for absences (template + guardian message permissions).
 
 Exit criteria: `QA-ATT-*` pass. Percentages match a hand-calculated fixture month.
+
+### Phase 5 status (2026-10-31)
+| Area | Status |
+|---|---|
+| Class register per section and date: everyone present by default, exceptions marked, saving completes it; closed days blocked unless corrected with a reason; teachers take only their class-teacher sections; arrival after the student late time becomes late | ✅ Done |
+| Missing-register list; corrections of earlier days need the correction permission and a reason (old/new kept); bulk change for a class or the school over a date range; change history | ✅ Done |
+| Attendance % per D-09 on marked working days; low attendance, full attendance, absent days in a row (days off skipped), class summaries, student month-by-month, monthly register PDF (moved students shown only for their dates) | ✅ Done |
+| Leave for students and staff entered by the office; approval turns those days into Leave, including days already marked (with a correction record) | ✅ Done |
+| Staff attendance with arrival times and category late times; corrections; monthly summary → approval (locks the month, verification code) → payroll fills the salary sheet from it; reopen only before salaries are approved | ✅ Done |
+| Optional absence SMS (setting, off by default) through the outbox; absent fine run in Fees (FR 10.12) | ✅ Done |
+| Tests: 132 backend (18 unit/architecture + 114 integration incl. 10 attendance cases), 23 frontend unit; browser tests for Phase 5 written, run pending (see below) | ✅ Backend and unit passing |
 
 ## Phase 6: Examinations and results
 FR 14.1–14.15
@@ -187,6 +238,15 @@ FR 14.1–14.15
 
 Exit criteria: `QA-EXM-*` pass. Grade-boundary and tie-ranking fixtures pass. A published result cannot change without an audit record.
 
+### Phase 6 status (2026-10-31)
+**Changed by the owner (D-51):** staff record simple test marks instead of creating exams.
+
+| Area | Status |
+|---|---|
+| Test marks: section, subject, name, date and "out of"; marks and Absent per student, stored on the student's record (profile tab); positions per test and overall over a period; teachers limited to their subjects and sections; changing a saved mark needs a reason and is logged; closed years read-only | ✅ Done |
+| Full exam system (exams, papers, datesheet, admit cards, review and publish with versions, report cards, result SMS, cumulative results): built and tested at API level, not in the menu | ⏸️ Hidden (D-51) |
+| Graphs of results | ⏳ Not built |
+
 ## Phase 7: Dashboard, office tools, communication
 FR 3.1–3.13, 4.3, 4.12, 8.6
 
@@ -196,6 +256,16 @@ FR 3.1–3.13, 4.3, 4.12, 8.6
   strip (max 5 lines, priority order). Figure masking toggle. Quick bar favourites.
 
 Exit criteria: `QA-DSH-*`, `QA-COM-*` pass. Dashboard loads in under 1.5 s with production-sized seed data.
+
+### Phase 7 status (2026-10-31)
+| Area | Status |
+|---|---|
+| Office tools: shared tasks, parent complaints with history and assignment, circulars, month calendar, visitor log, birthdays with wishes | ✅ Done |
+| Messages: send to all families, a class, a section, open enquiries or staff with a recipient, part and cost check first; automatic message templates; delivery log with send again; welcome message | ✅ Done |
+| Dashboard: urgent lines (at most five), totals, fee figures, attendance with a 7-day chart, complaints, tasks, recent admissions and withdrawals, birthdays, events, circulars, logins with new-location alerts, visitors; panels by role; masking; quick bar per user | ✅ Done |
+| SMS gateway adapter and staging allow-list: built and tested against a stand-in | ✅ Done |
+| Real SMS sending: needs a gateway account and its URL (`app.sms.url-template`) | ⏳ Waiting for the account |
+| Not built: FR 3.2 website form counters (Phase 9), tutorial videos on the quick bar, printed birthday and welcome cards, WhatsApp (after go-live, D-06) | ℹ️ |
 
 ## Phase 8: Reports
 FR 15.1–15.7
@@ -207,7 +277,19 @@ FR 15.1–15.7
 - Consolidated report catalogue linking the detailed reports from earlier phases.
 - Print / PDF / Excel for every report. Role-based content (fee data removed for unauthorised viewers).
 
+### Phase 8 status (2026-10-31)
+| Area | Status |
+|---|---|
+| Student, teacher and class reports for a week, month or custom dates, with the filters in the heading and a comparison with the previous period | ✅ Done |
+| PDF, Excel (numeric cells) and print for these reports, from the same data as the screen | ✅ Done |
+| Fee figures only for authorised users; teachers limited to their sections; teacher reports for the principal | ✅ Done |
+| All-schools report for the super admin: comparison, totals, drill-down, Excel with a sheet per school, PDF, audited | ✅ Done |
+| List of detailed reports; Excel, PDF and print on attendance, fee, financial, payroll and test marks pages | ✅ Done |
+| Not built: charts in reports, conduct or remarks in the student report (none are recorded) | ℹ️ |
+
 ## Phase 9: Public website
+**Dropped by the owner (2026-10-31, D-63). Not built.** The plan below is kept for reference only.
+
 FR 16.1–16.11
 
 - CMS: identity/contact/social, home slider (≤ 4) and key figures, about/message/mission/team, news/events posts, galleries,

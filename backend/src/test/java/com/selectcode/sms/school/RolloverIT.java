@@ -68,6 +68,9 @@ class RolloverIT extends IntegrationTest {
 		long roleId = db.queryForObject("""
 				insert into role (school_id, code, name, system_role, template_version) values (?, 'FRONT_OFFICE', 'Front office', true, 1)
 				returning id""", Long.class, school.id());
+		long accountant = db.queryForObject("""
+				insert into role (school_id, code, name, system_role, template_version) values (?, 'ACCOUNTANT', 'Accounts staff', true, 2)
+				returning id""", Long.class, school.id());
 		// A Phase 1 permission the school removed must stay removed; Phase 2 permissions are added.
 		for (ApplicationRunner runner : runners) {
 			if (runner.getClass().getSimpleName().startsWith("SystemRoleUpgrader")) {
@@ -76,8 +79,12 @@ class RolloverIT extends IntegrationTest {
 		}
 		var permissions = db.queryForList("select permission from role_permission where role_id = ?", String.class, roleId);
 		assertThat(permissions).contains("admissions.manage", "students.view").doesNotContain("academics.view");
+		// Phase 3: accounts staff get the fee permissions, but not approvals or reversals
+		assertThat(db.queryForList("select permission from role_permission where role_id = ?", String.class, accountant))
+			.contains("fees.view", "fees.payment.add", "fees.bill.generate")
+			.doesNotContain("fees.payment.reverse", "fees.adjust.approve", "academics.view");
 		assertThat(db.queryForObject("select template_version from role where id = ?", Integer.class, roleId))
-			.isEqualTo(2);
+			.isEqualTo(com.selectcode.sms.shared.security.Permissions.CATALOGUE_VERSION);
 		ApplicationArguments unused = null;
 		assertThat(unused).isNull();
 	}

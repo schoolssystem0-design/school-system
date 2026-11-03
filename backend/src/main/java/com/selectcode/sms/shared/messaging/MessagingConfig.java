@@ -32,9 +32,15 @@ class MessagingConfig {
 		}
 		JavaMailSender smtp = mailSender.getIfAvailable();
 		String from = environment.getProperty("app.mail.from", "no-reply@localhost");
-		return new MessageSender() {
+		String smsUrl = environment.getProperty("app.sms.url-template", "");
+		HttpSmsSender sms = smsUrl.isBlank() ? null
+				: new HttpSmsSender(smsUrl, environment.getProperty("app.sms.failure-text"));
+		MessageSender real = new MessageSender() {
 			@Override
 			public boolean send(OutgoingMessage message) {
+				if (message.channel() == OutgoingMessage.Channel.SMS && sms != null) {
+					return sms.send(message);
+				}
 				if (message.channel() == OutgoingMessage.Channel.EMAIL && smtp != null) {
 					SimpleMailMessage mail = new SimpleMailMessage();
 					mail.setFrom(from);
@@ -50,9 +56,15 @@ class MessagingConfig {
 
 			@Override
 			public boolean supports(OutgoingMessage.Channel channel) {
-				return channel == OutgoingMessage.Channel.EMAIL && smtp != null;
+				return channel == OutgoingMessage.Channel.SMS ? sms != null : smtp != null;
 			}
 		};
+		// Staging: messages only to the allow-list (comma-separated phone numbers and emails)
+		String allowList = environment.getProperty("app.messaging.allow-list", "");
+		return allowList.isBlank() ? real
+				: new AllowListSender(real, java.util.Arrays.stream(allowList.split(","))
+					.map(String::trim)
+					.collect(java.util.stream.Collectors.toSet()));
 	}
 
 	/** In-memory outbox for local development and tests. Never active in staging/production. */

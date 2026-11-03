@@ -93,4 +93,25 @@ public class AcademicStructure {
 				  and (effective_to is null or effective_to >= ?)""", Long.class, staffId, yearId,
 				java.sql.Date.valueOf(on), java.sql.Date.valueOf(on)));
 	}
+
+	/** Sections where the teacher is the class teacher on a date: the registers they may take (QA-STF-001). */
+	@Transactional(readOnly = true)
+	public Set<Long> classTeacherSections(long staffId, long yearId, LocalDate on) {
+		return Set.copyOf(jdbc.queryForList("""
+				select distinct section_id from teaching_assignment
+				where staff_id = ? and academic_year_id = ? and subject_id is null and effective_from <= ?
+				  and (effective_to is null or effective_to >= ?)""", Long.class, staffId, yearId,
+				java.sql.Date.valueOf(on), java.sql.Date.valueOf(on)));
+	}
+
+	/** Whether the staff member teaches the subject in the section on the date (marks entry, QA-EXM-003). */
+	@Transactional(readOnly = true)
+	public boolean teaches(long staffId, long yearId, long sectionId, long subjectId, LocalDate on) {
+		Long n = jdbc.queryForObject("""
+				select count(*) from teaching_assignment
+				where staff_id = ? and academic_year_id = ? and section_id = ? and subject_id = ? and effective_from <= ?
+				  and (effective_to is null or effective_to >= ?)""", Long.class, staffId, yearId, sectionId, subjectId,
+				java.sql.Date.valueOf(on), java.sql.Date.valueOf(on));
+		return n != null && n > 0;
+	}
 }

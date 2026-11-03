@@ -34,6 +34,7 @@ import { P } from "@/lib/permissions";
 import { label, today, UploadButton, useCan } from "@/features/people/shared";
 import { useYear } from "@/features/shell/year-context";
 import { useStepUp } from "@/features/step-up/step-up-provider";
+import { LeavePage } from "@/features/attendance/leave-page";
 import { staffBody, StaffForm, staffFrom } from "./staff-form";
 
 const onError = (e: unknown) => toast.error(errorMessage(e));
@@ -96,6 +97,7 @@ function Profile({ member }: { member: StaffMember }) {
         <TabsList className="flex-wrap">
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="classes">Classes taught</TabsTrigger>
+          {can(P.ATTENDANCE_VIEW) && <TabsTrigger value="attendance">Attendance &amp; leave</TabsTrigger>}
           {can(P.STAFF_SALARY_VIEW) && <TabsTrigger value="salary">Salary</TabsTrigger>}
           {can(P.STAFF_MANAGE) && <TabsTrigger value="documents">Documents</TabsTrigger>}
           {can(P.STAFF_MANAGE) && <TabsTrigger value="certificates">Certificates</TabsTrigger>}
@@ -104,6 +106,11 @@ function Profile({ member }: { member: StaffMember }) {
         <TabsContent value="details" className="mt-4">
           <Details key={member.version} member={member} />
         </TabsContent>
+        {can(P.ATTENDANCE_VIEW) && (
+          <TabsContent value="attendance" className="mt-4">
+            <LeavePage personType="STAFF" personId={id} />
+          </TabsContent>
+        )}
         <TabsContent value="classes" className="mt-4">
           <ClassesTaught staffId={id} />
         </TabsContent>

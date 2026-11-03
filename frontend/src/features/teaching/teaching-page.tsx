@@ -46,6 +46,7 @@ export function TeachingPage() {
         <TabsList>
           <TabsTrigger value="assignments">Teachers by section</TabsTrigger>
           <TabsTrigger value="timetable">Timetable</TabsTrigger>
+          <TabsTrigger value="teacher">Teacher&apos;s timetable</TabsTrigger>
           <TabsTrigger value="handover">Hand over</TabsTrigger>
         </TabsList>
         <TabsContent value="assignments" className="mt-4">
@@ -53,6 +54,9 @@ export function TeachingPage() {
         </TabsContent>
         <TabsContent value="timetable" className="mt-4">
           <Timetable yearId={selected.id ?? 0} />
+        </TabsContent>
+        <TabsContent value="teacher" className="mt-4">
+          <TeacherTimetable yearId={selected.id ?? 0} />
         </TabsContent>
         <TabsContent value="handover" className="mt-4">
           <Handover yearId={selected.id ?? 0} />
@@ -257,6 +261,86 @@ function Timetable({ yearId }: { yearId: number }) {
           days={days}
           initial={periods.data}
         />
+      )}
+    </div>
+  );
+}
+
+/** One teacher's week across all sections (FR 6.4), read-only. */
+function TeacherTimetable({ yearId }: { yearId: number }) {
+  const teachers = useTeachers();
+  const [staffId, setStaffId] = useState<number | "">("");
+  const week = useQuery({ queryKey: ["school", "week", yearId], queryFn: () => school.week(yearId) });
+  const periods = useQuery({
+    queryKey: ["teaching", yearId, "timetable", "staff", staffId],
+    queryFn: () => teaching.timetable(yearId, { staffId: Number(staffId) }),
+    enabled: staffId !== "",
+  });
+  const days = DAYS.map((d, i) => ({ name: d, weekday: i + 1 })).filter((d) => (week.data?.[d.name] ?? "FULL") !== "OFF");
+  const data = periods.data ?? [];
+  const count = Math.max(0, ...data.map((p) => p.periodNo ?? 0));
+  const at = (weekday: number, periodNo: number) => data.filter((p) => p.weekday === weekday && p.periodNo === periodNo);
+  return (
+    <div className="flex flex-col gap-4">
+      <Field id="tt-teacher" label="Teacher" className="max-w-xs">
+        <NativeSelect id="tt-teacher" value={staffId} onChange={(e) => setStaffId(e.target.value ? Number(e.target.value) : "")}>
+          <option value="">Choose</option>
+          {(teachers.data?.items ?? []).map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name}
+            </option>
+          ))}
+        </NativeSelect>
+      </Field>
+      {staffId === "" ? (
+        <Empty title="Choose a teacher" />
+      ) : periods.isPending ? (
+        <Loading />
+      ) : periods.isError ? (
+        <ErrorState error={periods.error} onRetry={() => periods.refetch()} />
+      ) : data.length === 0 ? (
+        <Empty title="No periods for this teacher yet" />
+      ) : (
+        <Card>
+          <CardContent className="overflow-x-auto p-0">
+            <table className="w-full min-w-[640px] border-collapse text-sm">
+              <thead>
+                <tr>
+                  <th scope="col" className="border-b p-2 text-left font-medium">
+                    Period
+                  </th>
+                  {days.map((d) => (
+                    <th key={d.weekday} scope="col" className="border-b p-2 text-left font-medium">
+                      {d.name.charAt(0) + d.name.slice(1, 3).toLowerCase()}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {Array.from({ length: count }, (_, i) => i + 1).map((n) => (
+                  <tr key={n} className="align-top">
+                    <th scope="row" className="border-b p-2 text-left font-medium">
+                      {n}
+                    </th>
+                    {days.map((d) => (
+                      <td key={d.weekday} className="border-b p-2">
+                        {at(d.weekday, n).map((p) => (
+                          <div key={p.sectionId}>
+                            <div className="font-medium">{p.sectionLabel}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {p.subjectName ?? "—"}
+                              {p.startTime ? ` · ${p.startTime.slice(0, 5)}` : ""}
+                            </div>
+                          </div>
+                        ))}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

@@ -35,6 +35,8 @@ public enum SettingKey {
 			"Flag students absent this many working days in a row", Type.INTEGER, 3, null),
 	LOW_ATTENDANCE_PERCENT(Group.ATTENDANCE, "Low attendance alert (%)",
 			"Flag students whose attendance falls below this percentage", Type.INTEGER, 75, null),
+	SEND_ABSENCE_SMS(Group.ATTENDANCE, "SMS parents about absences",
+			"Send an SMS to the family when a register marks a child absent", Type.BOOLEAN, false, null),
 
 	// --- Fees (FR 10)
 	FEE_DUE_DAY(Group.FEES, "Fee due day of month", "Monthly fee vouchers are due on this day", Type.INTEGER, 10,
@@ -49,10 +51,20 @@ public enum SettingKey {
 			Type.BOOLEAN, true, null),
 	SIGNATURE_ON_VOUCHER(Group.FEES, "Signature on vouchers", "Print the accounts signature on vouchers", Type.BOOLEAN,
 			false, null),
+	ABSENT_FINE_AMOUNT(Group.FEES, "Absent fine per day (Rs.)",
+			"Charged for each unexplained absence when the absent fine is run; 0 = no fine", Type.MONEY, "0", null),
+	VOUCHER_BANK_DETAILS(Group.FEES, "Bank details on vouchers",
+			"Bank name, branch and account number printed on fee vouchers", Type.TEXT, "", null),
+	VOUCHER_NOTE(Group.FEES, "Note on vouchers", "Short note printed at the bottom of every fee voucher", Type.TEXT, "",
+			null),
 
 	// --- Discounts (FR 10.3)
 	MAX_DISCOUNT_WITHOUT_APPROVAL(Group.DISCOUNTS, "Maximum discount without approval (%)",
 			"Larger discounts wait for the principal's approval", Type.INTEGER, 25, null),
+
+	// --- School accounts (FR 11.5)
+	EXPENSE_APPROVAL_LIMIT(Group.ACCOUNTS, "Expense approval limit (Rs.)",
+			"Expenses and supplier payments above this wait for approval", Type.MONEY, "50000", null),
 
 	// --- Receipts (FR 10.8)
 	RECEIPT_STYLE(Group.RECEIPTS, "Receipt size", "Paper size for printed receipts", Type.ENUM, "A5",
@@ -63,12 +75,17 @@ public enum SettingKey {
 	// --- Report cards (FR 14.13)
 	SHOW_ATTENDANCE_ON_REPORT_CARD(Group.REPORT_CARDS, "Attendance % on report cards",
 			"Print the attendance percentage on report cards", Type.BOOLEAN, true, null),
+	REPORT_CARD_LAYOUT(Group.REPORT_CARDS, "Report card layout",
+			"Classic: a table per subject with grades. Compact: one page with marks and a summary box", Type.ENUM,
+			"CLASSIC", List.of("CLASSIC", "COMPACT")),
 	SHOW_HIGHEST_MARKS_COLUMN(Group.REPORT_CARDS, "Highest marks column",
 			"Print the highest marks in class for each subject", Type.BOOLEAN, false, null),
 
 	// --- Results (FR 14.8)
 	SHOW_CLASS_POSITIONS(Group.RESULTS, "Show class positions",
 			"Positions on report cards, result sheets and result SMS (all together)", Type.BOOLEAN, false, null),
+	MARKS_DUE_DAYS(Group.RESULTS, "Days to enter test marks",
+			"Marks entered within this many days of the test count as on time in teacher reports", Type.INTEGER, 7, null),
 	POSITION_TIE_METHOD(Group.RESULTS, "Position ties", "How equal totals are ranked", Type.ENUM, "STANDARD",
 			List.of("STANDARD", "DENSE")),
 
@@ -90,6 +107,12 @@ public enum SettingKey {
 			List.of("SMS", "WHATSAPP")),
 	SMS_SENDER_MASK(Group.MESSAGES, "SMS sender name", "Approved sender ID shown on SMS (set when the account is opened)",
 			Type.TEXT, "", null),
+	SMS_COST_PER_PART(Group.MESSAGES, "Cost of one SMS part", "Used for the cost estimate shown before sending", Type.MONEY,
+			"0", null),
+	ENQUIRY_FOLLOWUP_DAYS(Group.MESSAGES, "Enquiry follow-up days",
+			"An enquiry with no contact for this many days shows as urgent on the dashboard", Type.INTEGER, 3, null),
+	COMPLAINT_URGENT_DAYS(Group.MESSAGES, "Complaint urgent days",
+			"A complaint open for this many days shows as urgent on the dashboard", Type.INTEGER, 7, null),
 	ADMIN_ALERT_MOBILE(Group.MESSAGES, "Admin mobile for alerts", "Mobile number that receives system alerts",
 			Type.TEXT, "", null),
 
@@ -99,13 +122,16 @@ public enum SettingKey {
 	DEDUCT_ABSENT_DAYS(Group.SALARY, "Deduct absent days from salary", "Unpaid absent days reduce the salary",
 			Type.BOOLEAN, true, null),
 	HALF_DAY_DEDUCTION(Group.SALARY, "Deduct half days", "Half days reduce the salary by half a day", Type.BOOLEAN,
-			true, null);
+			true, null),
+	PAID_LEAVE_DAYS_PER_MONTH(Group.SALARY, "Paid leave days per month",
+			"Leave days per month that are not deducted; extra leave is deducted", Type.INTEGER, 1, null);
 
 	public enum Group {
 
 		GENERAL("General preferences"), ATTENDANCE("Attendance"), FEES("Fees"), DISCOUNTS("Discounts"),
 		RECEIPTS("Receipts"), REPORT_CARDS("Report cards"), RESULTS("Results"), SIGNATURES("Signatures"),
-		CERTIFICATES("Certificates"), WARNINGS("Warning letters"), MESSAGES("Messages"), SALARY("Salary");
+		CERTIFICATES("Certificates"), WARNINGS("Warning letters"), MESSAGES("Messages"), SALARY("Salary"),
+		ACCOUNTS("School accounts");
 
 		public final String label;
 

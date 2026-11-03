@@ -16,9 +16,18 @@
 |---|---|
 | QA-TEN | `backend/.../shared/tenant/TenantIsolationIT` (13 cases), `PlatformIT`, `SchoolSetupIT` (cross-school files), `SettingsIT` (per-school values) |
 | QA-PLT | `backend/.../platform/PlatformIT` (8), `frontend/tests/e2e/phase1.spec.ts` |
-| QA-SEC | `backend/.../iam/SignInFlowIT` (11), `IamIT` (8), `PasswordAndLocationTest`, `TotpTest`, `ArchitectureTest.everyEndpointDeclaresItsAccessRule`, `frontend/tests/e2e/sign-in.spec.ts` |
+| QA-SEC | `backend/.../iam/SignInFlowIT` (12), `IamIT` (8), `PasswordAndLocationTest`, `TotpTest`, `ArchitectureTest.everyEndpointDeclaresItsAccessRule`, `frontend/tests/e2e/sign-in.spec.ts` |
 | QA-SET | `SchoolSetupIT` (7), `SettingsIT` (3), e2e rule change with step-up |
 | QA-ACA | `AcademicsIT` (2), e2e class + section |
+| QA-ADM | `AdmissionsIT` (6), `frontend/tests/e2e/phase2.spec.ts` (enquiry → approve → enrol) |
+| QA-STU | `StudentsIT` (6), `RolloverIT` (2), e2e withdrawal + leaving certificate, e2e cross-school search |
+| QA-FAM | `FamiliesIT` (4) |
+| QA-STF | `StaffIT` (3), e2e add staff |
+| QA-FEE | `backend/.../fees/FeesIT` (18: idempotent runs and payments, missing amounts, discounts and approval, rounding, siblings, partial/family/advance payments, two cashiers, atomic failure, late fee, corrections, reversal, insert-only grants, other school, receipt sequence, 40-step random reconciliation), `frontend/src/lib/money.test.ts`, `frontend/tests/e2e/phase3.spec.ts` |
+| QA-ACC | `backend/.../accounts/AccountsIT` (7: transfer, approval limit, reversal, idempotency + insert-only, day close incl. fee receipts and lock, suppliers + bank reconciliation, reports vs journal, other school), `frontend/tests/e2e/phase4.spec.ts` |
+| QA-PAY | `backend/.../payroll/PayrollIT` (4: increment month, late-as-absent formula, approve → pay once → locked → reverse, permissions and step-up), e2e prepare and discard a sheet |
+| QA-ATT | `backend/.../attendance/AttendanceIT` (10: register default and completion, missing list, closed days and corrections, teacher scope, % formula, days in a row, leave over marked days, staff late by category → approved month → payroll, moved student and monthly PDF, bulk change + absent fine, other school), `frontend/tests/e2e/phase5.spec.ts` |
+| API contract | `ArchitectureTest.apiTypesHaveUniqueNames` (no two API types share a schema name), `OpenApiExportIT` |
 
 ## 2. Test levels and tools
 
@@ -132,6 +141,8 @@ Legend: **P** = priority (M/S). Unless stated, each case also checks that an aud
 | QA-SEC-017 | — | M | CSRF: POST without `X-XSRF-TOKEN` (token from `/auth/csrf`) | 403 |
 | QA-SEC-018 | — | M | CORS: request from an origin other than the app domain | Blocked |
 | QA-SEC-019 | — | M | Hidden menu items | Menu matches role. Direct URL navigation still hits API 403 and shows a friendly page |
+| QA-SEC-021 | 2.1 | M | Same user signs in from several devices at the same moment | All succeed; sign-in does not change the user's version, so an admin editing that user gets no false conflict |
+| QA-SEC-022 | 2.1 | S | 31st sign-in attempt from one network within 5 minutes | 429 `RATE_LIMITED`; sign-in page says to wait a few minutes |
 
 ### QA-SET: School setup, years, settings (FR 1, 9.1, 12)
 | ID | FR | P | Scenario | Expected |
@@ -166,6 +177,8 @@ Legend: **P** = priority (M/S). Unless stated, each case also checks that an aud
 | QA-ADM-006 | 4.7 | M | GR number suggestion conflicts with a concurrent enrolment | Second save gets a uniqueness error and a fresh suggestion |
 | QA-ADM-007 | 4.9 | M | Upload a 30 MB file / an `.exe` renamed `.pdf` | Rejected by size / magic-byte check |
 | QA-ADM-008 | 4.10 | M | Enrol into Class 4 | Admission fee + first month proposed from the fee structure; adjustment needs permission |
+| QA-ADM-010 | 4.6 | M | Enrol an enquiry that is not approved | Enrol button disabled with a hint; API returns 422 `NOT_APPROVED` |
+| QA-ADM-011 | 4.6 | M | Enquiry contact details for a role without `students.private.view` | Phone/CNIC/address hidden; editing keeps the stored values |
 | QA-ADM-009 | 4.3 | S | Bulk SMS to Class 1 enquiries | Recipient preview; outbox rows; delivery log |
 
 ### QA-STU / QA-FAM / QA-STF: People (FR 5–8)
@@ -177,6 +190,9 @@ Legend: **P** = priority (M/S). Unless stated, each case also checks that an aud
 | QA-STU-004 | 5.5 | M | Promote Class 5 except two (one repeats, one leaves) | New-year enrolments correct; old-year class/results unchanged |
 | QA-STU-005 | 5.6 | M | Withdraw with an outstanding balance | Balance shown; must choose: settle, carry, or write off as bad debt (permission); student inactive; appears in leavers & dashboard |
 | QA-STU-006 | 5.8 | M | Leaving certificate | School heading, signatures and serial no. correct; serial numbers per school |
+| QA-STU-008 | 5.8 | M | Leaving certificate for a student who has not left | Not offered in the UI; API returns 422 `NOT_LEFT` |
+| QA-STU-009 | 5.11 | M | Edit a student as a role without `students.private.view` | B-Form/phone/address hidden and kept unchanged on save |
+| QA-STU-010 | 1.3 | M | Copy set-up from the previous year into a new year | Chosen items copied; the earlier year unchanged; copying into an earlier or closed year refused |
 | QA-STU-007 | 5.7 | M | Character certificate for a student who left 3 years ago | Record found in leavers; certificate issued |
 | QA-FAM-001 | 8.2 | M | Open family with 3 children | All children and balances visible to the accountant |
 | QA-FAM-002 | 8.3 | M | Grandmother receives attendance messages, father receives fee bills | Outbox routes each message type to the right person |
@@ -184,6 +200,8 @@ Legend: **P** = priority (M/S). Unless stated, each case also checks that an aud
 | QA-FAM-004 | 8.5 | S | Data-quality report | Lists invalid phones, missing CNIC, families with no children |
 | QA-STF-001 | 6.3 | M | Assign Maths 8-A/8-B + class teacher 8-A | Teacher scope = 8-A, 8-B; attendance only for 8-A |
 | QA-STF-002 | 6.6 | M | Bulk move all periods to a replacement from 1 Dec | Past marks still attributed to the original teacher |
+| QA-STF-004 | 6.4 | M | Same teacher in two sections in the same period | Saving the second timetable fails with `TEACHER_DOUBLE_BOOKED` |
+| QA-STF-005 | 6.1 | M | Salary change | New dated row with reason; earlier rows unchanged; needs `staff.salary.manage` + verification code |
 | QA-STF-003 | 6.7/7.4 | M | Staff leaves | Login deactivated; removed from active lists/timetable; history and experience certificate available |
 
 ### QA-FEE: Fees (FR 10, 4.10). **Highest-risk suite.**
@@ -195,7 +213,7 @@ Legend: **P** = priority (M/S). Unless stated, each case also checks that an aud
 | QA-FEE-004 | 10.4 | S | Third child admitted, rule 10%/20% | Third child's tuition −20% automatically; first two unchanged |
 | QA-FEE-005 | 10.5 | M | Generate October tuition for the whole school | One line per student/head/period; job report counts match the enrolled count |
 | QA-FEE-006 | 10.5 | M | **Run the same bill generation twice** | Second run creates nothing (idempotent); report says "already billed" |
-| QA-FEE-007 | 10.5 | M | Kill the batch job mid-run, then restart | Resumes; no duplicates; no gaps |
+| QA-FEE-007 | 10.5 | M | Stop a bill run mid-way (chunks already committed), then run it again | Resumes; no duplicates; no gaps |
 | QA-FEE-008 | 10.6 | M | Voucher with arrears hidden + late fee note | Totals correct; arrears hidden but included in the total per setting |
 | QA-FEE-010 | 10.7 | M | Pay 5,000 against a 7,000 bill | Status PARTIAL; balance 2,000.00; cash account +5,000; receipt issued |
 | QA-FEE-011 | 10.7 | M | **Atomicity:** force failure after receipt insert, before journal | Whole payment rolled back; no receipt number consumed (or the voided number is recorded) |
@@ -214,6 +232,10 @@ Legend: **P** = priority (M/S). Unless stated, each case also checks that an aud
 | QA-FEE-024 | 10.16 | M | Defaulters > Rs. 10,000, final reminder letter | Correct list; letter PDF generated; follow-up remark saved |
 | QA-FEE-025 | 10.17 | M | Fee-head collection report for October | Matches Σ allocations by head; matches the accounts fee-income total |
 | QA-FEE-026 | 10.18 | M | Auditor traces a receipt | Shows student/family, heads, account, method, user, timestamp |
+| QA-FEE-029 | 10.13 | M | Reduce a charge that was already paid | Excess becomes advance credit (journal Dr fee income / Cr advances) and settles the next bill |
+| QA-FEE-030 | 10.5 | M | Bill run without an Idempotency-Key / payment with a reused key and a different amount | 422 `IDEMPOTENCY_KEY_REQUIRED` / 422 `IDEMPOTENCY_KEY_REUSED` |
+| QA-FEE-031 | 10.13 | M | Approve a correction or reverse a payment | Needs the approval/reversal permission and a fresh verification code |
+| QA-FEE-032 | — | M | User limited to assigned classes holds fee permissions | Fee endpoints refuse (fees need the "all classes" data scope) |
 | QA-FEE-027 | — | M | **Property test:** random sequences of bills, discounts, payments, reversals | Invariant: balance = Σnet + Σadj − Σalloc ≥ −advance; no float drift; sums always reconcile |
 | QA-FEE-028 | — | M | Rounding: 33.33% discount on 3,000 | Deterministic HALF_UP to 2 dp; voucher, ledger and report show the same figure |
 
@@ -228,6 +250,11 @@ Legend: **P** = priority (M/S). Unless stated, each case also checks that an aud
 | QA-ACC-006 | 11.11 | M | Expense entered twice → reverse | Reversal entry, approver recorded, both visible |
 | QA-ACC-007 | — | M | Trial balance at any date | Σdebits = Σcredits |
 | QA-ACC-008 | 11.13 | M | October income/expense report | Matches journal totals by category |
+| QA-ACC-009 | 11.9 | M | Record a fee payment or expense in cash on a closed day | Refused with `DAY_CLOSED`; another (open) account still works |
+| QA-ACC-010 | 11.5 | M | Same Idempotency-Key for an entry, then with a different amount | Same entry returned / 422 `IDEMPOTENCY_KEY_REUSED` |
+| QA-ACC-011 | 11.6 | M | Expense entry against the Salaries category | Refused: salaries go through payroll |
+| QA-PAY-004 | 13.12 | M | Staff member without a salary record | Left off the sheet and listed as skipped |
+| QA-PAY-005 | — | M | Change a line of an approved sheet directly in the database | Refused by the database trigger |
 | QA-PAY-001 | 13.12 | M | Rule: 3 late days = 1 absence; staff has 4 late + 1 absent | Deduction = 2 days at basic/working days (formula documented); slip shows breakdown |
 | QA-PAY-002 | 6.8 | M | Increment recorded in July | August salary uses the new basic, July the old |
 | QA-PAY-003 | — | M | Approve and pay a salary sheet | Journal entry posted once; sheet locked; corrections only via reversal |
@@ -245,23 +272,52 @@ Legend: **P** = priority (M/S). Unless stated, each case also checks that an aud
 | QA-ATT-008 | 13.8 | M | Approve 3-day leave | Those days show Leave, not Absent, including already-marked days (recalculated with audit) |
 | QA-ATT-009 | 13.9 | M | Teacher arrives 7:50 vs 7:30 start; support staff 7:20 vs 7:00 | Both marked late using category-specific thresholds |
 | QA-ATT-010 | 13.11 | M | Monthly staff summary → approve | Locked; payroll uses the approved summary only |
+| QA-ATT-012 | 13.1 | M | Subject teacher (not class teacher) opens another section's register | Can view, cannot save (403) |
+| QA-ATT-013 | 13.11 | M | Approve a staff month with unmarked days | Refused unless "count unmarked as present"; reopening refused once salaries are approved |
+| QA-ATT-014 | 13.8 | M | Second leave overlapping an existing one | Refused (409) |
 | QA-ATT-011 | 13.1 | M | Student moved section mid-month | Monthly register for each section shows the student only for their dates |
+
+### QA-MRK: Simple test marks (D-51)
+| ID | FR | P | Scenario | Expected |
+|---|---|---|---|---|
+| QA-MRK-001 | 14.5 | M | Marks above the "out of" total, not a number, or for a student outside the section | Refused |
+| QA-MRK-002 | 14.8 | M | Two students tie at 95 and one has 80 | Positions 1, 1, 3 (or 1, 1, 2 with the dense setting); Absent has no position |
+| QA-MRK-003 | 14.8 | M | Overall positions over two tests with different totals | Ranked by percentage of the tests with marks; Absent counts as 0 |
+| QA-MRK-004 | 14.5 | M | Teacher adds or edits marks outside their subject or section | 403; another section's test is 404 |
+| QA-MRK-005 | 14.11 | M | Change a saved mark | Needs a reason; old and new values logged |
+| QA-MRK-006 | 14.15 | M | Change marks in a closed year | Refused (YEAR_CLOSED); reading still works |
+| QA-MRK-007 | P-1 | M | Another school opens a test or a student's marks | 404 or empty |
+
+### QA-OFF: Office tools (FR 3)
+| ID | FR | P | Scenario | Expected |
+|---|---|---|---|---|
+| QA-OFF-001 | 3.5 | M | A task shared with one colleague | The creator and the colleague see it and can complete it; anyone else gets 404 |
+| QA-OFF-002 | 3.3 | M | Assign, remark on and close a complaint | History kept; closing needs a note; closed years are read-only |
+| QA-OFF-003 | 3.10 | M | Event with the last day before the first; events overlapping a month | Refused; shown on each day they cover |
+| QA-OFF-004 | 3.4 | S | Send a birthday wish twice | One message a year; the list shows it was sent |
+| QA-OFF-005 | P-1 | M | Another school opens a complaint, task, circular or student | 404 or empty |
 
 ### QA-EXM: Exams and results (FR 14)
 | ID | FR | P | Scenario | Expected |
 |---|---|---|---|---|
-| QA-EXM-001 | 14.1 | M | Hidden exam | Not visible to parents/teachers until made visible |
+| QA-EXM-001 | 14.1 | M | Hidden exam | Not visible to teachers until made visible |
 | QA-EXM-002 | 14.5 | M | Enter 112 for a 100-mark paper | Rejected inline and by the API |
 | QA-EXM-003 | 14.5 | M | Teacher enters marks for an unassigned section/subject | 403 |
 | QA-EXM-004 | 14.6 | M | Mark Absent vs leave blank | Absent shows "Abs"; blank listed as missing; publish blocked while missing > 0 |
 | QA-EXM-005 | 14.7 | M | Grade boundaries: 94.99, 95.00, 100, 0 | Correct band per scale (boundary inclusivity documented) |
 | QA-EXM-006 | 14.7 | M | Grade-only class (Play Group) | No marks/percentages shown; grades only |
 | QA-EXM-007 | 14.8 | S | Positions with ties (two at 87.5%) | Tie handled per setting (1,1,3 or 1,1,2) |
-| QA-EXM-008 | 14.10 | M | Draft → Reviewed → Published | Parents see nothing before Published; only the principal can publish |
+| QA-EXM-008 | 14.10 | M | Draft → Reviewed → Published | Nothing is sent to families or printed as final before Published; only users with the publish permission can publish |
 | QA-EXM-009 | 14.11 | M | Correct after publish | Requires unlock permission + reason; new version; revised report card; audit entry; old snapshot kept |
 | QA-EXM-010 | 14.13 | M | Batch report cards for Class 5 with attendance % on | Each card correct; signatures from document identity |
 | QA-EXM-011 | 14.15 | M | Reprint a 2024 report card | Uses the frozen snapshot, not current grading rules |
 | QA-EXM-012 | 14.1 | S | Cumulative result (first term + final, weights) | Totals match a hand-calculated fixture |
+| QA-EXM-013 | 14.10 | M | Change a mark after the class was reviewed | Class goes back to draft and must be reviewed again |
+| QA-EXM-014 | 14.6 | M | Absent in one paper, Exempt in another | Absent counts 0 of the maximum and fails; Exempt is left out of the total |
+| QA-EXM-015 | 14.15 | M | Change the grade scale after publishing | Published results and reprints keep the old grades (D-49) |
+| QA-EXM-016 | 14.14 | M | Send results twice with the same key; two children on one phone | Each child gets one message; the repeat queues nothing |
+| QA-EXM-018 | 14.15 | M | Change marks, papers, remarks or the workflow in a closed year | Refused (YEAR_CLOSED) without the closed-year correction permission; reading and printing still work |
+| QA-EXM-017 | P-1 | M | Another school opens an exam class, its results or report cards | 404; each school has its own grade scales |
 
 ### QA-DSH: Dashboard (FR 3)
 | ID | FR | P | Scenario | Expected |
@@ -280,6 +336,9 @@ Legend: **P** = priority (M/S). Unless stated, each case also checks that an aud
 | QA-COM-002 | 8.6 | M | Long template (> 160 chars) | GSM-7 segment count and cost estimate shown before send |
 | QA-COM-003 | — | M | Provider failure / retry | Exponential backoff, max attempts, final FAILED state visible |
 | QA-COM-004 | — | M | Staging environment | Messages only to the allow-list |
+| QA-COM-005 | 8.6 | M | Send to a section with two children on one phone and a family with no phone | One message to that phone; the other counted as no phone; the same key queues nothing more |
+| QA-COM-006 | 8.6 | M | Template with an unknown placeholder | Refused with the list of allowed placeholders |
+| QA-COM-007 | 4.12 | S | Press Welcome twice | One message; the list shows Welcomed |
 
 ### QA-RPT: Reports (FR 15)
 | ID | FR | P | Scenario | Expected |
@@ -288,6 +347,11 @@ Legend: **P** = priority (M/S). Unless stated, each case also checks that an aud
 | QA-RPT-002 | 15.2 | M | Student monthly report | Attendance %, exam results in period, comparison with the previous period |
 | QA-RPT-003 | 15.7 | M | Subject teacher's class report | No fee data in screen, PDF or Excel |
 | QA-RPT-004 | 15.6 | M | Export to Excel and PDF | Values identical to screen; money cells numeric in Excel |
+| QA-RPT-005 | 15.1 | M | Dates outside the selected academic year | Refused, naming the year's dates |
+| QA-RPT-006 | 15.3 | S | Tests entered on time, late and incomplete; an on-time mark corrected later | Each status correct; the correction does not make it late |
+| QA-RPT-007 | 15.7 | M | Teacher opens a student or section they do not teach, or a teacher report | 404; 403 |
+| QA-RPT-008 | 15.6 | M | Export a table with a value starting with = and a code 00123 | The value stays text and never runs as a formula; the code keeps its zeros |
+| QA-RPT-009 | P-5 | M | Another school opens a report | 404; cross-school report 403 |
 
 ### QA-WEB: Website (FR 16)
 | ID | FR | P | Scenario | Expected |

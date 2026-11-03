@@ -30,6 +30,17 @@ public final class TestData {
 				(?, 'New enquiry', '#2563eb', 1, 'NEW'), (?, 'Follow-up needed', '#d97706', 2, 'FOLLOW_UP'),
 				(?, 'Admission approved', '#16a34a', 3, 'APPROVED'), (?, 'Not proceeding', '#6b7280', 4, 'NOT_PROCEEDING'),
 				(?, 'Enrolled', '#7c3aed', 5, 'ENROLLED')""", id, id, id, id, id);
+		// Fees defaults (FeeLedger.onSchoolCreated does the same for schools created through the platform).
+		jdbc.update("""
+				insert into ledger_account (school_id, code, name, account_type, subtype, display_order) values
+				(?, '1000', 'Cash in hand', 'ASSET', 'CASH', 1), (?, '1010', 'Bank account', 'ASSET', 'BANK', 2),
+				(?, '2100', 'Fees received in advance', 'LIABILITY', 'STUDENT_ADVANCE', 3),
+				(?, '4000', 'Fee income', 'INCOME', 'FEE_INCOME', 4)""", id, id, id, id);
+		jdbc.update("""
+				insert into fee_head (school_id, name, frequency, display_order, system_code)
+				values (?, 'Late fee', 'CUSTOM', 1000, 'LATE_FEE'), (?, 'Absent fine', 'CUSTOM', 1001, 'ABSENT_FINE')""", id, id);
+		com.selectcode.sms.accounts.app.AccountsSetupService.seed(jdbc, id);
+		com.selectcode.sms.exams.app.ExamSetupService.seed(jdbc, id);
 		return new SeededSchool(id, code);
 	}
 

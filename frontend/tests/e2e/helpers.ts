@@ -59,8 +59,22 @@ export async function signInOwner(page: Page) {
 /** Latest step-up code from the local dev outbox (local profile only). */
 export async function latestCode(page: Page) {
   const response = await page.request.get(`${API}/dev/outbox`);
-  const entries = (await response.json()) as { message: { body: string } }[];
-  const match = entries[0]?.message.body.match(/\b(\d{6})\b/);
+  const entries = (await response.json()) as { message: { subject: string | null; body: string } }[];
+  // Newest first; an SMS being dispatched can land on top of the code
+  const code = entries.find((e) => e.message.subject === "Your verification code");
+  const match = code?.message.body.match(/\b(\d{6})\b/);
   if (!match) throw new Error("No verification code in the dev outbox");
   return match[1];
+}
+
+/** Calls the API with the page's session cookie and a CSRF token (test set-up only). */
+export async function apiCall<T>(page: Page, method: "GET" | "POST" | "PUT", path: string, body?: unknown): Promise<T> {
+  const csrf = (await (await page.request.get(`${API}/auth/csrf`)).json()) as { token: string };
+  const response = await page.request.fetch(`${API}${path}`, {
+    method,
+    headers: { "X-XSRF-TOKEN": csrf.token, "Content-Type": "application/json" },
+    data: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (!response.ok()) throw new Error(`${method} ${path} failed: ${response.status()} ${await response.text()}`);
+  return (response.status() === 204 ? undefined : await response.json()) as T;
 }

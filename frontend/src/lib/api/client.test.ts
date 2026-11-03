@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError, api, resetCsrfToken } from "./client";
+import { ApiError, api, apiBlob, resetCsrfToken } from "./client";
 
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), {
@@ -59,5 +59,20 @@ describe("api client", () => {
     expect(error).toBeInstanceOf(ApiError);
     expect(error).toMatchObject({ status: 422, code: "VALIDATION_FAILED", requestId: "req-123" });
     expect(error.fieldErrors).toHaveLength(1);
+  });
+
+  it("downloads files as blobs and still accepts problem responses", async () => {
+    fetchMock.mockResolvedValueOnce(new Response("%PDF", { status: 200, headers: { "Content-Type": "application/pdf" } }));
+    const blob = await apiBlob("/students/1/bio-data");
+    expect(await blob.text()).toBe("%PDF");
+    const accept = (fetchMock.mock.calls[0][1]?.headers as Record<string, string>).Accept;
+    expect(accept).toContain("application/pdf");
+    expect(accept).toContain("application/problem+json");
+  });
+
+  it("raises ApiError when a file download fails", async () => {
+    fetchMock.mockResolvedValueOnce(json(422, { code: "NOT_LEFT", detail: "Record the withdrawal first" }));
+    const error = (await apiBlob("/students/1/certificates/LEAVING").catch((e: unknown) => e)) as ApiError;
+    expect(error).toMatchObject({ status: 422, code: "NOT_LEFT" });
   });
 });

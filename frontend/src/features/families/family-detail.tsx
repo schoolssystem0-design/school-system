@@ -16,6 +16,7 @@ import { errorMessage } from "@/lib/api/client";
 import { families, students, type Family } from "@/lib/api/people";
 import { P } from "@/lib/permissions";
 import { label, useCan } from "@/features/people/shared";
+import { FamilyFees } from "@/features/fees/student-fees";
 import { familyBody, FamilyForm, familyFrom } from "./family-form";
 
 export function FamilyDetail() {
@@ -87,6 +88,7 @@ function FamilyView({ family }: { family: Family }) {
           </form>
         </CardContent>
       </Card>
+      {can(P.FEES_VIEW) && <FamilyFees familyId={id} />}
       {can(P.STUDENTS_VIEW) && (
         <Card>
           <CardHeader>
